@@ -1,0 +1,25 @@
+image: node:latest
+
+before_script:
+  - npm install
+
+build:
+  stage: build
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - dist
+
+pages:
+  stage: deploy
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
+
+cache:
+  paths:
+    - node_modules
+
