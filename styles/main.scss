@@ -34,6 +34,24 @@
 }
 
 
+@keyframes fadeInFromNone {
+    0% {
+        display: none;
+        opacity: 0;
+    }
+
+    1% {
+        display: block;
+        opacity: 0;
+    }
+
+    100% {
+        display: block;
+        opacity: 1;
+    }
+}
+
+
 
 * {
   box-sizing: border-box;
@@ -323,11 +341,23 @@ $ribbon-line-height: 1.2;
     width: 200px;
     height: 8px;
 
-    background-color: #eee; // var(--back-color);
+    background-color: #eee;
     border: none;
     border-radius: 10px;
 
+    &::-webkit-progress-bar {
+      background-color: #eee;
+      border: none;
+      border-radius: 10px;
+    }
+
+
     &::-moz-progress-bar {
+      background-color: var(--front-color);
+      border-radius: 10px;
+    }
+
+    &::-webkit-progress-value {
       background-color: var(--front-color);
       border-radius: 10px;
     }
@@ -336,8 +366,12 @@ $ribbon-line-height: 1.2;
 
 #window-grid {
   display: none;
-
   height: 100%;
+
+  &.active {
+    display: block;
+    animation: fadeInFromNone 800ms ease-out;
+  }
 
   /* ul {
     display: flex;

@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@dpnp/library": "^0.1.0",
     "css-loader": "^3.4.0",
     "dat.gui": "^0.7.6",
     "node-sass": "^4.13.0",
