@@ -4,7 +4,10 @@ module.exports = {
   context: __dirname,
   mode: 'development',
 
-  entry: './src/index.js',
+  entry: {
+    main: './src/index.js',
+    worker: './src/worker.js'
+  },
   output: {
     path: __dirname + '/public',
     filename: '[name].bundle.js'
