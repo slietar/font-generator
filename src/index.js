@@ -1,10 +1,17 @@
 import '../styles/main.scss';
 
 import * as dat from 'dat.gui';
+import { IO } from './io';
+import { LocalCanvasRenderer } from './render-client';
 
 
 window.addEventListener('load', () => {
   let worker = new Worker('worker.bundle.js');
+  let io = new IO(worker);
+
+  let mainNode = io.register('main');
+  let initNode = io.register('initialization');
+
 
   let gui = new dat.GUI();
   gui.hide();
@@ -28,7 +35,7 @@ window.addEventListener('load', () => {
   folderUI.open();
 
   let folderRender = gui.addFolder('Render');
-  folderRender.add(settings, 'renderer', { Canvas: 0, Pixi: 1, SVG: 2 });
+  folderRender.add(settings, 'renderer', { 'Local canvas': 0, 'Remote canvas': 1, 'Transferred canvas': 2, SVG: 3, WebGL: 4 });
   folderRender.add(settings, 'pointDensity', 0.5, 1.5);
   folderRender.open();
 
@@ -71,29 +78,46 @@ window.addEventListener('load', () => {
       document.querySelector('#window-grid').classList.add('active');
   });
 
-  worker.addEventListener('message', (event) => {
-    let msg = event.data;
 
-    switch (msg.type) {
-      case 'ready':
-        progress.update(20);
-        break;
-
-      case 'load.progress':
-        progress.update(20 + msg.value * 0.6);
-        break;
-
-      case 'load.done':
-        progress.update(80);
-        break;
-
-      case 'decode.done':
-        progress.update(100);
-        initializeSliders(msg.fontNames);
-        break;
-    }
+  mainNode.once('ready', () => {
+    progress.update(20);
   });
 
+  initNode.on('load.progress', ({ value }) => {
+    progress.update(20 + value * 0.6);
+  });
+
+  initNode.once('load.done', () => {
+    progress.update(80);
+  });
+
+  initNode.once('decode.done', ({ fontNames }) => {
+    progress.update(100);
+    initializeSliders(fontNames);
+  });
+
+
+  let renderer = new LocalCanvasRenderer(io);
+
+  renderer.initialize()
+    .then(() => {
+      console.log('OK');
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+
+  mainNode.on('computation.start', () => {
+    document.querySelector('#window-grid').classList.add('blurred');
+  });
+
+
+  // tmp
+  window.refreshSliders = () => {
+    mainNode.emit('weights.updateall', {
+      values: Array.from(document.querySelectorAll('[type=range]')).map((e) => e.value / 100)
+    });
+  }
 
   function initializeSliders(fontNames) {
     let slidersBox = document.querySelector('#sliders');
@@ -111,11 +135,42 @@ window.addEventListener('load', () => {
     for (let index = 0; index < sliderItems.length; index++) {
       let item = sliderItems[index];
 
+      let timeout = null;
+      let setWeight = (value) => {
+        if (timeout !== null) {
+          clearTimeout(timeout);
+        }
+
+        timeout = setTimeout(() => {
+          timeout = null;
+
+          mainNode.emit('weights.update', {
+            index,
+            value: range.value / 100
+          });
+        }, 300);
+      };
+
+      let setWeightImmediate = (value) => {
+        if (timeout === null) {
+          return;
+        }
+
+        clearTimeout(timeout);
+        timeout = null;
+
+        mainNode.emit('weights.update', {
+          index,
+          value: range.value / 100
+        });
+      };
+
       let range = item.querySelector('input[type=range]');
       let textbox = item.querySelector('input[type=text]');
 
       range.addEventListener('input', () => {
         textbox.value = range.value;
+        setWeight();
       });
 
       textbox.addEventListener('focus', () => {
@@ -126,6 +181,7 @@ window.addEventListener('load', () => {
         if (textbox.value !== '') {
           range.value = textbox.value;
           textbox.value = Math.round(range.value);
+          setWeight();
         }
       });
 
@@ -133,6 +189,7 @@ window.addEventListener('load', () => {
         if (e.key === 'Escape' || e.key === 'Enter') {
           e.preventDefault();
           textbox.blur();
+          setWeightImmediate();
         }
 
         if (e.key === 'ArrowUp' && index !== 0) {
