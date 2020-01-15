@@ -2,7 +2,7 @@ const webpack = require('webpack');
 
 module.exports = {
   context: __dirname,
-  mode: 'development',
+  mode: 'production',
 
   entry: {
     main: './src/index.js',
