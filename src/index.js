@@ -17,7 +17,7 @@ window.addEventListener('load', () => {
   window.app = app;
 
 
-  let gui = new dat.GUI();
+  let gui = new dat.GUI({ hideable: false });
   gui.hide();
 
   let settings = {
