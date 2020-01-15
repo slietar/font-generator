@@ -17,8 +17,13 @@ export class LocalCanvasRenderer {
     let { glyphs } = await this.node.receive('initialize');
 
     let windowTag = document.querySelector('#window');
+
     let gridTag = document.querySelector('#window-grid');
     let canvasContainerTag = gridTag.querySelector('ul');
+
+    let displayTag = document.querySelector('#window-display');
+    let displayCanvasTag = displayTag.querySelector('.display-canvas');
+
 
     let { width: windowWidth, height: windowHeight } = windowTag.getBoundingClientRect();
     let gridColumns = Math.round(windowWidth / 144);
@@ -49,13 +54,24 @@ export class LocalCanvasRenderer {
       canvasContainerTag.appendChild(li);
     }
 
+
+    displayCanvasTag.width = windowWidth / 2 - 1;
+    displayCanvasTag.height = windowHeight - 65;
+
+
     this.node.emit('initialize', {
-      canvases: this.canvases.map((canvas) => [canvas.width, canvas.height])
+      gridCanvasSize: [canvasWidth, canvasHeight],
+      displayCanvasSize: [displayCanvasTag.width, displayCanvasTag.height]
     });
 
     this.node.on('render', (data) => {
       this.render(data);
-      gridTag.classList.remove('blurred');
+      windowTag.classList.remove('blurred');
+    });
+
+    this.node.on('render-display', (data) => {
+      this.renderDisplay(data);
+      windowTag.classList.remove('blurred');
     });
   }
 
@@ -104,6 +120,34 @@ export class LocalCanvasRenderer {
       ctx.strokeStyle = 'red';
       ctx.stroke(); */
     }
+  }
+
+  renderDisplay({ instructions }) {
+    let canvas = document.querySelector('#window-display canvas');
+    let ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+
+    ctx.transform(...instructions.transform);
+
+    for (let [path, isClockwise] of instructions.paths) {
+      ctx.beginPath();
+      ctx.moveTo(path.start.x, path.start.y);
+
+      for (let curve of path.curves) {
+        if (curve.control) {
+          ctx.quadraticCurveTo(curve.control.x, curve.control.y, curve.end.x, curve.end.y);
+        } else {
+          ctx.lineTo(curve.end.x, curve.end.y);
+        }
+      }
+
+      ctx.fillStyle = isClockwise ? '#000' : '#fff';
+      ctx.fill();
+    }
+
+    ctx.restore();
   }
 
   /* render() {

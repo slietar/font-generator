@@ -1,3 +1,5 @@
+import * as opentype from 'opentype.js';
+
 import * as format from './format';
 import { IO } from './io';
 import { BezierQuadratic, Font, Glyph, Line, Path } from './glyphs';
@@ -13,21 +15,47 @@ main()
   });
 
 
+
 class Application {
-  constructor(options) {
+  constructor(options, node) {
     this.fonts = options.fonts;
     this.glyphsMetadata = options.glyphsMetadata;
 
+    this.node = node;
+
     this.settings = {
-      angleThreshold: 0.02,
-      pointDensity: 50,
+      angleThreshold: 0.005,
+      pointDensity: 40,
       simplificationThreshold: 0.001
     };
 
-    this.computedGlyphs = [];
     this.weights = new Array(this.fonts.length).fill(0.5);
 
     this.renderer = new LocalCanvasRenderer(this, io);
+
+
+    this.computationTimeout = null;
+    this.computedGlyphs = [];
+
+    this.currentFontUrl = null;
+    this.currentGlyphIndex = 0;
+    this.currentStretch = { x: 1, y: 1 };
+    this.mode = 0;
+
+
+    // Register = {
+    //   alternates: number[], | each glyph
+    //   points: Point[][][],  | each glyph, each path, each point
+    //   result: Font,         |
+    //   weights: number[]     | each font
+    // }
+    //
+    // Registers:
+    //  (0) low-resolution incorrect-density for grid mode
+    //  (1) high-resolution for grid + display modes
+    //  (2) pre-generated high-resolution [0]
+    //  (3) pre-generated high-resolution [1]
+    // this.registers = [];
   }
 
   computeFontValues() {
@@ -45,12 +73,12 @@ class Application {
     }
 
     return {
-      ascent: ascent / totalWeight,
-      descent: descent / totalWeight
+      ascent: ascent / totalWeight * this.currentStretch.y,
+      descent: descent / totalWeight * this.currentStretch.y
     };
   }
 
-  computeGlyph(glyphIndex) {
+  getAlternateIndex(glyphIndex) {
     let metadata = this.glyphsMetadata[glyphIndex];
 
     let maxWeight = -1 / 0;
@@ -65,7 +93,12 @@ class Application {
       }
     }
 
-    let alternateFontIndices = metadata.alternates[maxWeightAlternateIndex];
+    return [maxWeightAlternateIndex, maxWeight];
+  }
+
+  computeGlyphDensity(glyphIndex, alternateIndex, weightSum) {
+    let metadata = this.glyphsMetadata[glyphIndex];
+    let alternateFontIndices = metadata.alternates[alternateIndex];
 
 
     let anchorPoints = [];
@@ -86,7 +119,7 @@ class Application {
           let ctrlPosition = controlPositions[ctrlIndex];
           let nextCtrlPosition = controlPositions[(ctrlIndex + 1) % controlPositions.length];
 
-          ctrlNumberPoints += path.distance(ctrlPosition, nextCtrlPosition) * this.settings.pointDensity * (this.weights[fontIndex] / maxWeight);
+          ctrlNumberPoints += path.distance(ctrlPosition, nextCtrlPosition) * this.settings.pointDensity * (this.weights[fontIndex] / weightSum);
         }
 
         ctrlNumberPoints = Math.round(ctrlNumberPoints);
@@ -101,6 +134,18 @@ class Application {
       anchorPoints.push(pathAnchorPoints);
       numberPoints.push(pathNumberPoints);
     }
+
+    return [anchorPoints, numberPoints];
+  }
+
+
+  computeGlyph(glyphIndex) {
+    let metadata = this.glyphsMetadata[glyphIndex];
+
+    let [alternateIndex, weightSum] = this.getAlternateIndex(glyphIndex);
+    let alternateFontIndices = metadata.alternates[alternateIndex];
+
+    let [anchorPoints, numberPoints] = this.computeGlyphDensity(glyphIndex, alternateIndex, weightSum);
 
 
     for (let fontIndex of alternateFontIndices) {
@@ -129,7 +174,7 @@ class Application {
             if (anchorPosition >= 1) anchorPosition -= 1;
 
             let [curve, relPos] = path.curveAtPos(anchorPosition);
-            pathAnchorPoints[pathAnchorIndex] = pathAnchorPoints[pathAnchorIndex].add(curve.func(relPos).mul(this.weights[fontIndex] / maxWeight));
+            pathAnchorPoints[pathAnchorIndex] = pathAnchorPoints[pathAnchorIndex].add(curve.func(relPos).mul(this.weights[fontIndex] / weightSum));
 
             pathAnchorIndex++;
           }
@@ -138,6 +183,11 @@ class Application {
     }
 
     let paths = anchorPoints.map((pathAnchorPoints) => {
+      for (let point of pathAnchorPoints) {
+        point.x *= this.currentStretch.x;
+        point.y *= this.currentStretch.y;
+      }
+
       // Ramer-Douglas-Peucker
 
       let halfIndex = Math.floor(pathAnchorPoints.length / 2);
@@ -223,29 +273,133 @@ class Application {
       unicode: metadata.unicode,
 
       advance: alternateFontIndices.reduce((sum, fontIndex) =>
-        sum + this.fonts[fontIndex].glyphs[glyphIndex].advance * this.weights[fontIndex] / maxWeight
-        , 0)
+        sum + this.fonts[fontIndex].glyphs[glyphIndex].advance * this.weights[fontIndex] / weightSum
+        , 0) * this.currentStretch.x
     });
   }
 
-  updateWeight(index, value) {
+    /* updateWeight(index, value) {
+    if (this.computationTimeout !== null) {
+      clearTimeout(this.computationTimeout);
+    }
+
     this.weights[index] = value;
 
-    for (let glyphIndex = 0; glyphIndex < this.glyphsMetadata.length; glyphIndex++) {
-      this.computedGlyphs[glyphIndex] = this.computeGlyph(glyphIndex);
+    return new Promise((resolve) => {
+      let a = Date.now();
+
+      let glyphIndex = 0;
+
+      let computeNextGlyph = () => {
+        let [alternateIndex, alternateWeightSum] = this.getAlternateIndex(glyphIndex);
+
+        if (alternateIndex != this.computed[0].alternates[glyphIndex]) {
+          this.computed[0].points = this.computeGlyphDensity(glyphIndex);
+          this.computeGlyph(glyphIndex);
+        } else {
+          this.computeUpdatedWeight(glyphIndex, index, value);
+        }
+
+
+        glyphIndex++;
+
+        if (glyphIndex < this.glyphsMetadata.length) {
+          this.computationTimeout = setTimeout(computeNextGlyph, 0);
+        } else {
+          this.computationTimeout = null;
+
+          let b = Date.now();
+          console.info(`Execution took ${b - a}ms`);
+
+          resolve();
+          this.renderer.render(0);
+        }
+      };
+
+      this.computationTimeout = setTimeout(computeNextGlyph, 1);
+    });
+
+  } */
+
+  async exportFont() {
+    let { ascent, descent } = this.computeFontValues();
+
+    let font = new Font(this.computedGlyphs, {
+      ascent, descent,
+      name: 'Relentless ' + Math.round(Math.random() * 1e9).toString(16)
+    });
+
+
+    let buffer = font.exportToOpentype(opentype).toArrayBuffer();
+
+    if (this.currentFontUrl !== null) {
+      URL.revokeObjectURL(this.currentFontUrl);
     }
 
-    this.renderer.render(0);
+    let blob = new Blob([buffer], { type: 'application/x-font-opentype' });
+    let url = URL.createObjectURL(blob);
+
+    this.currentFontUrl = url;
+
+    this.node.emit('export', { url });
+
+    /* let fontface = new FontFace('Computed', `url(${url})`);
+    await fontface.load();
+
+    document.fonts.add(fontface); */
   }
 
-  updateWeights(values) {
-    this.weights = values;
-
-    for (let glyphIndex = 0; glyphIndex < this.glyphsMetadata.length; glyphIndex++) {
-      this.computedGlyphs[glyphIndex] = this.computeGlyph(glyphIndex);
+  updateWeights(index, value, stretch) {
+    if (this.computationTimeout !== null) {
+      clearTimeout(this.computationTimeout);
     }
 
-    this.renderer.render(0);
+    if (index !== null) {
+      this.weights[index] = value;
+    } else {
+      this.weights = value;
+    }
+
+    if (stretch) {
+      this.currentStretch = {
+        x: 1 + Math.random() * 0.1,
+        y: 1 + Math.random() * 0.1
+      };
+    }
+
+    return new Promise((resolve) => {
+      let a = Date.now();
+
+      let glyphIndex = 0;
+
+      let computeNextGlyph = () => {
+        this.computedGlyphs[glyphIndex] = this.computeGlyph(glyphIndex);
+
+        glyphIndex++;
+
+        if (glyphIndex < this.glyphsMetadata.length) {
+          this.computationTimeout = setTimeout(computeNextGlyph, 0);
+        } else {
+          this.computationTimeout = null;
+
+          let b = Date.now();
+          console.info(`Execution took ${b - a}ms`);
+
+          resolve();
+
+          this.renderer.render();
+          this.renderer.renderDisplay(this.currentGlyphIndex);
+
+          this.exportFont()
+            .catch((err) => {
+              console.error(err);
+            });
+        }
+      };
+
+      this.computationTimeout = setTimeout(computeNextGlyph, 1);
+    });
+
   }
 }
 
@@ -266,25 +420,31 @@ async function main() {
   let data = format.decode(rawData);
   let obj = extractData(data);
 
-  let app = new Application(obj);
+  let app = new Application(obj, mainNode);
 
   initNode.emit('decode.done', {
-    fontNames: data.fonts.map((font) => font.name)
+    fontNames: data.fonts.map((font) => font.name),
+    glyphCharacters: obj.glyphsMetadata.map((glyph) => glyph.character)
   });
 
   mainNode.on('weights.update', (data) => {
     mainNode.emit('computation.start');
-    app.updateWeight(data.index, data.value);
+    app.updateWeights(data.index, data.value, data.stretch);
   });
 
   mainNode.on('weights.updateall', (data) => {
-    app.updateWeights(data.values);
+    app.updateWeights(null, data.values, data.stretch);
   });
 
   await app.renderer.initialize();
 
   // tmp
-  app.updateWeights(new Array(app.fonts.length).fill(0.5));
+  app.updateWeights(null, new Array(app.fonts.length).fill(0.5), false);
+
+  mainNode.on('set-display-glyph', ({ index: glyphIndex }) => {
+    app.currentGlyphIndex = glyphIndex;
+    app.renderer.renderDisplay(glyphIndex);
+  });
 }
 
 

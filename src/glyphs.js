@@ -1,4 +1,5 @@
 // import * as opentype from 'opentype.js';
+import { getNotdefGlyph } from './notdef';
 
 
 export class Font {
@@ -12,7 +13,7 @@ export class Font {
     this.name = options.name;
   }
 
-  exportToOpentype() {
+  exportToOpentype(opentype) {
     let notdefGlyph = new opentype.Glyph({
       name: '.notdef',
       unicode: 0,
@@ -20,7 +21,7 @@ export class Font {
       path: new opentype.Path()
     });
 
-    let glyphs = this.glyphs.map((glyph) => glyph.exportToOpentype());
+    let glyphs = this.glyphs.map((glyph) => glyph.exportToOpentype(opentype));
 
     /* let c = document.createElement('canvas');
     c.width = 500;
@@ -55,7 +56,7 @@ export class Glyph {
     this.xBearing = options.xBearing;
   }
 
-  exportToOpentype() {
+  exportToOpentype(opentype) {
     let opentypePath = new opentype.Path();
 
     for (let path of this.paths) {

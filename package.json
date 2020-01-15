@@ -13,6 +13,7 @@
     "css-loader": "^3.4.0",
     "dat.gui": "^0.7.6",
     "node-sass": "^4.13.0",
+    "opentype.js": "^1.1.0",
     "sass-loader": "^8.0.0",
     "style-loader": "^1.1.2",
     "webpack": "^4.41.5",

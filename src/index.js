@@ -13,6 +13,10 @@ window.addEventListener('load', () => {
   let initNode = io.register('initialization');
 
 
+  let app = new Application(mainNode);
+  window.app = app;
+
+
   let gui = new dat.GUI();
   gui.hide();
 
@@ -74,8 +78,8 @@ window.addEventListener('load', () => {
   let progressAdd = 10;
 
   progress.onDone(() => {
-      document.querySelector('#window-loader').style.display = 'none';
-      document.querySelector('#window-grid').classList.add('active');
+    document.querySelector('#window-loader').style.display = 'none';
+    document.querySelector('#window-display').classList.add('active');
   });
 
 
@@ -91,9 +95,12 @@ window.addEventListener('load', () => {
     progress.update(80);
   });
 
-  initNode.once('decode.done', ({ fontNames }) => {
+  initNode.once('decode.done', ({ fontNames, glyphCharacters }) => {
     progress.update(100);
     initializeSliders(fontNames);
+
+    app.initializeGlyphs(glyphCharacters);
+    app.initializeSliders();
   });
 
 
@@ -108,13 +115,14 @@ window.addEventListener('load', () => {
     });
 
   mainNode.on('computation.start', () => {
-    document.querySelector('#window-grid').classList.add('blurred');
+    document.querySelector('#window').classList.add('blurred');
   });
 
 
   // tmp
   window.refreshSliders = () => {
     mainNode.emit('weights.updateall', {
+      stretch: false,
       values: Array.from(document.querySelectorAll('[type=range]')).map((e) => e.value / 100)
     });
   }
@@ -146,9 +154,10 @@ window.addEventListener('load', () => {
 
           mainNode.emit('weights.update', {
             index,
+            stretch: false,
             value: range.value / 100
           });
-        }, 300);
+        }, 50);
       };
 
       let setWeightImmediate = (value) => {
@@ -211,6 +220,174 @@ window.addEventListener('load', () => {
 });
 
 
+class Application {
+  constructor(node) {
+    this.node = node;
+
+    this.currentFontface = null;
+    this.currentFontUrl = null;
+
+    this.mode = 0;
+    this.displayGlyphIndex = -1;
+
+    this.elements = {
+      downloadButton: document.querySelector('.input-download'),
+      randomizeButton: document.querySelector('.input-randomize'),
+      sliders: null,
+      toggleModeButtons: Array.from(document.querySelectorAll('.input-toggle-mode')),
+      textboxSizeSlider: document.querySelector('.input-textbox-size'),
+      textboxInput: document.querySelector('.input-textbox'),
+
+      displayCanvas: document.querySelector('.display-canvas'),
+      glyphList: document.querySelector('.glyph-list'),
+
+      window: document.querySelector('#window'),
+      windowDisplay: document.querySelector('#window-display'),
+      windowGrid: document.querySelector('#window-grid')
+    };
+
+
+    for (let element of this.elements.toggleModeButtons) {
+      element.addEventListener('click', (event) => {
+        event.preventDefault();
+
+        this.toggleMode();
+      }, false);
+    }
+
+    this.elements.textboxSizeSlider.addEventListener('input', (event) => {
+      event.preventDefault();
+      this.updateTextboxFontSize();
+    }, false);
+
+    this.updateTextboxFontSize();
+
+    this.node.on('export', ({ url }) => {
+      let oldFontFace = this.currentFontface;
+      let fontface = new FontFace('Computed', `url(${url})`);
+
+      this.currentFontface = fontface;
+      this.currentFontUrl = url;
+
+      fontface.load()
+        .then(() => {
+          document.fonts.add(fontface);
+
+          if (oldFontFace !== null) {
+            document.fonts.delete(oldFontFace);
+          }
+        });
+    });
+
+    this.elements.downloadButton.addEventListener('click', (event) => {
+      event.preventDefault();
+
+      let link = document.createElement("a");
+
+      link.download = 'Relentless.otf';
+      link.href = this.currentFontUrl;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  }
+
+  initializeGlyphs(glyphs) {
+    let sortedGlyphs = glyphs || [
+      ...glyphs.slice(0, 26),
+      ...glyphs.slice(52, 57),
+      ...glyphs.slice(62, 67),
+
+      ...glyphs.slice(26, 52),
+      ...glyphs.slice(57, 62),
+      ...glyphs.slice(67, 72)
+    ];
+
+    for (let glyph of sortedGlyphs) {
+      this.elements.glyphList.innerHTML += `<li><a href="#">${glyph === ' ' ? '&nbsp;' : glyph}</a></li>`;
+    }
+
+    this.elements.glyphListLinks = Array.from(this.elements.glyphList.querySelectorAll('a'));
+    
+    this.elements.glyphListLinks.forEach((element, index) => {
+      element.addEventListener('click', (event) => {
+        event.preventDefault();
+
+        this.setDisplayGlyph(index);
+      }, false);
+    });
+
+    this.setDisplayGlyph(0);
+  }
+
+  initializeSliders() {
+    this.elements.fontItems = Array.from(document.querySelectorAll('#sliders input[type=range]'));
+
+    let randomCdf = (x) => {
+      let a = 4;
+      let k = 0.7; // minimum probability
+
+      return a * (x ** 3) / 3 - a * k * (x ** 2) + (1 + (k - 1 / 3) * a) * x;
+    };
+
+    let inverseRandomCdf = inverseFunc(randomCdf, 0, 1);
+
+
+    this.elements.randomizeButton.addEventListener('click', (event) => {
+      event.preventDefault();
+
+      let values = [];
+
+      for (let element of Array.from(document.querySelectorAll('#sliders li'))) {
+        let value = Math.max(0, inverseRandomCdf(Math.random()) - Math.random() * 0.5);
+
+        element.querySelector('input[type=range]').value = Math.round(value * 100);
+        element.querySelector('input[type=text]').value = Math.round(value * 100);
+        values.push(value);
+      }
+
+      this.elements.window.classList.add('blurred');
+      this.node.emit('weights.updateall', { stretch: true, values });
+    }, false);
+  }
+
+  setDisplayGlyph(index) {
+    for (let element of this.elements.glyphListLinks) {
+      element.classList.remove('active');
+    }
+
+    /* if (index > 0) {
+      this.elements.glyphListLinks[this.displayGlyphIndex].classList.remove('active');
+    } */
+
+    this.elements.glyphListLinks[index].classList.add('active');
+
+    this.displayGlyphIndex = index;
+    this.node.emit('set-display-glyph', { index });
+  }
+
+  toggleMode() {
+    this.mode = 1 - this.mode;
+
+    this.elements.windowDisplay.classList.toggle('active');
+    this.elements.windowGrid.classList.toggle('active');
+
+    for (let element of this.elements.toggleModeButtons) {
+      element.classList.toggle('active');
+    }
+
+    this.node.emit('set-mode', { mode: this.mode });
+  }
+
+  updateTextboxFontSize() {
+    let value = parseInt(this.elements.textboxSizeSlider.value);
+
+    this.elements.textboxInput.style['font-size'] = (1 + value / 100 * 6) + 'rem';
+  }
+}
+
+
 class ProgressBar {
   constructor(element) {
     this.element = element;
@@ -246,5 +423,20 @@ class ProgressBar {
     this.addition = value - this.element.value;
     this.target = value;
   }
+}
+
+
+function inverseFunc(func, min, max, steps = 10) {
+  let inverse = (target, min, max, steps) => {
+    let middle = (min + max) / 2;
+
+    return steps === 0
+      ? middle
+      : func(middle) > target
+        ? inverse(target, min, middle, steps - 1)
+        : inverse(target, middle, max, steps - 1);
+  };
+
+  return (target) => inverse(target, min, max, steps);
 }
 

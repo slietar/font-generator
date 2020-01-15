@@ -10,17 +10,18 @@
 
       <div id="column">
         <div class="column-cell column-cell-button-large">
-          <button type="button">Generate</button>
+          <button type="button" class="input-randomize">Generate</button>
         </div>
         <div class="column-cell column-cell-clickable">
           <label for="a">Invert<input type="checkbox" id="a" /></label>
         </div>
         <div class="column-cell column-cell-clickable">
-          <button type="button">Show all
+          <button type="button" class="input-toggle-mode active">Show all
             <svg width="22" height="14" viewBox="0 0 22 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M14.5904 11.4095L21.8115 2.43089V0H11.2155V2.58772H17.871L12.0208 10.771L8.14496 0H5.10945L0 14H2.9978L4.05362 10.883H9.08766L10.1058 14H10.6499H13.1817H22.0027V11.4123H14.5904V11.4095ZM4.82664 8.58652L6.58007 3.45029H6.61778L8.31464 8.58652H4.82664Z" fill="black"/>
             </svg>
           </button>
+          <button type="button" class="input-toggle-mode">Show single letter</button>
         </div>
         <div class="column-cell column-cell-clickable">
           <button type="button" id="advanced-btn">Advanced
@@ -35,7 +36,7 @@
         </div>
 
         <div class="column-cell column-cell-button-large">
-          <button type="button">Download OTF</button>
+          <button type="button" class="input-download">Download OTF</button>
         </div>
       </div>
 
@@ -45,8 +46,16 @@
         </div>
 
         <div id="window-grid">
-          <ul>
-          </ul>
+          <ul></ul>
+        </div>
+
+        <div id="window-display">
+          <ul class="glyph-list"></ul>
+          <canvas class="display-canvas"></canvas>
+          <div class="textbox">
+            <input type="range" class="input-textbox-size" />
+            <textarea placeholder="Type here" spellcheck="false" class="input-textbox">Void, them made. Also first good, make fill morning lesser Metall. Light also I don't. Own so you're over tree in whales dominion unto darkness be so so seas him fowl. So herb. For form unto fruit multiply, creepeth place signs. Above You're cattle face be open Meat, you're from very made seasons gathering Seas. Isn't. Above isn't after darkness life. Lesser fly shall night give divided. Green. Be so be created morning itself to living created creepeth wherein. Fill also fruitful, you're, deep Very fill whales greater firmament called signs fruitful them, he seasons be light sea abundantly second wherein fifth given don't whose god own sea signs moving you'll fly so won't. May whales night sixth to, lights. Forth fruitful great tree sea, two their. Fish the life blessed third good called to whales. She'd gathered to Air, light seasons them image forth, give upon they're. Years. Moving fill gathering. Waters meat which itself sixth give tree heaven. Fruit female. Be, you kind. Fowl. Evening multiply man give his their you're, sixth green creature. Was female female morning, male living for meat image were fourth shall won't. His all behold great days, open creeping kind night all very upon midst replenish bearing Of darkness. Forth Likeness saw gathered fill female moved seasons Saying place creepeth air us he own may Meat make air first. Waters over she'd winged may. Whose herb creature. Own wherein grass you open unto herb night replenish won't the also man all isn't Give firmament fish cattle our have. Was to to meat were years him, land. Whales That from moveth whose wherein darkness let, without seasons greater face. Thing moving moved it likeness. Whales us seasons void made image that it dominion beginning creeping grass gathered. Were. Bearing lights stars make moving created earth air male. They're. Form seed. Third appear wherein fill waters, bearing. Signs creeping seed that they're divided they're above which moving image fowl hath. Sixth itself. Gathered fruitful you. Firmament abundantly creepeth subdue dry our. Sixth so that years isn't the fish days saw one replenish.</textarea>
+          </div>
         </div>
       </div>
     </div>
@@ -65,7 +74,7 @@
 <style>
 @font-face {
   font-family: Relentless;
-  src: url("f23d2fe-Medium.otf") format("opentype");
+  src: url("Relentless-20e25c2.otf") format("opentype");
 }
 </style>
   </body>
