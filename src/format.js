@@ -1,24 +1,4 @@
-import * as lib from '@dpnp/library';
-
-
-lib.encodeArray = (encodeItem, input, write) => {
-  lib.encodeFixedInt({ signed: false, size: 4 }, input.length, write);
-
-  for (let item of input) {
-    encodeItem(item, write);
-  }
-};
-
-lib.decodeArray = (decodeItem, read) => {
-  let size = lib.decodeFixedInt({ signed: false, size: 4 }, read);
-  let output = new Array(size);
-
-  for (let index = 0; index < size; index++) {
-    output[index] = decodeItem(read);
-  }
-
-  return output;
-};
+import * as lib from './dpnp-library';
 
 
 export function encode(input) {
@@ -193,4 +173,3 @@ function _decodeCurve(read) {
     };
   }
 }
-

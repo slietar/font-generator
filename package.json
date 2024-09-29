@@ -1,22 +1,18 @@
 {
   "name": "font-generator-website",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "mkdir -p public && cp assets/* public && webpack"
+    "build": "mkdir -p public && cp assets/* public && npm run build:scripts && npm run build:styles",
+    "build:scripts": "esbuild src/index.js --bundle --format=esm --minify --outfile=public/scripts/main.js && esbuild src/worker.js --bundle --format=esm --minify --outfile=public/scripts/worker.js",
+    "build:scripts:watch-main": "esbuild src/index.js --bundle --format=esm --outfile=public/scripts/main.js --sourcemap --watch",
+    "build:scripts:watch-worker": "esbuild src/worker.js --bundle --format=esm --outfile=public/scripts/worker.js --sourcemap --watch",
+    "build:styles": "sass styles/main.scss:public/styles.css"
   },
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
-    "@dpnp/library": "^0.1.0",
-    "css-loader": "^3.4.0",
     "dat.gui": "^0.7.6",
-    "node-sass": "^4.13.0",
+    "esbuild": "^0.24.0",
     "opentype.js": "^1.1.0",
-    "sass-loader": "^8.0.0",
-    "style-loader": "^1.1.2",
-    "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10"
+    "sass": "^1.79.4"
   }
 }

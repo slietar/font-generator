@@ -450,7 +450,7 @@ async function main() {
 
 async function loadData(progressCallback) {
   let cache = await self.caches.open('data-cache');
-  let url = 'download.dat';
+  let url = new URL('../download.dat', import.meta.url);
 
   let cachedRes = await cache.match(url);
   let res = cachedRes || await fetch(url, { cache: 'no-store' });
@@ -591,4 +591,3 @@ function rdp(points, last, threshold) {
     ...rdp(points.slice(greatestDistancePointIndex), last, threshold)
   ];
 }
-

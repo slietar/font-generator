@@ -1,12 +1,11 @@
-import '../styles/main.scss';
-
 import * as dat from 'dat.gui';
 import { IO } from './io';
 import { LocalCanvasRenderer } from './render-client';
 
 
 window.addEventListener('load', () => {
-  let worker = new Worker('worker.bundle.js');
+  let workerUrl = new URL('./worker.js', import.meta.url);
+  let worker = new Worker(workerUrl, { type: 'module' });
   let io = new IO(worker);
 
   let mainNode = io.register('main');
@@ -18,7 +17,7 @@ window.addEventListener('load', () => {
 
 
   let gui = new dat.GUI({ hideable: false });
-  gui.hide();
+  // gui.hide();
 
   let settings = {
     invert: false,
@@ -309,7 +308,7 @@ class Application {
     }
 
     this.elements.glyphListLinks = Array.from(this.elements.glyphList.querySelectorAll('a'));
-    
+
     this.elements.glyphListLinks.forEach((element, index) => {
       element.addEventListener('click', (event) => {
         event.preventDefault();
@@ -439,4 +438,3 @@ function inverseFunc(func, min, max, steps = 10) {
 
   return (target) => inverse(target, min, max, steps);
 }
-
