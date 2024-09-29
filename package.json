@@ -9,9 +9,11 @@
     "build:scripts:watch-worker": "esbuild src/worker.js --bundle --format=esm --outfile=public/scripts/worker.js --sourcemap --watch",
     "build:styles": "sass styles/main.scss:public/styles.css"
   },
+  "dependencies": {
+    "opentype.js": "^1.1.0"
+  },
   "devDependencies": {
     "esbuild": "^0.24.0",
-    "opentype.js": "^1.1.0",
     "sass": "^1.79.4"
   }
 }

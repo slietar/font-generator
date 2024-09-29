@@ -82,13 +82,16 @@ window.addEventListener('load', () => {
   });
 
 
-  // tmp
-  window.refreshSliders = () => {
-    mainNode.emit('weights.updateall', {
-      stretch: false,
-      values: Array.from(document.querySelectorAll('[type=range]')).map((e) => e.value / 100)
-    });
-  }
+  let getAllWeights = () => Array.from(document.querySelectorAll('#sliders [type=range]')).map((e) => e.value / 100);
+  let checkIfAllWeightsAreZero = () => {
+    if (getAllWeights().every((v) => v < 1e-4)) {
+      let explosionUrl = new URL('../explosion.webp', import.meta.url);
+
+      setTimeout(() => {
+        document.body.innerHTML = `<img src="${explosionUrl.href}" class="explosion">`;
+      }, 200);
+    }
+  };
 
   function initializeSliders(fontNames) {
     let slidersBox = document.querySelector('#sliders');
@@ -115,6 +118,7 @@ window.addEventListener('load', () => {
         timeout = setTimeout(() => {
           timeout = null;
 
+          checkIfAllWeightsAreZero();
           mainNode.emit('weights.update', {
             index,
             stretch: false,
@@ -131,6 +135,7 @@ window.addEventListener('load', () => {
         clearTimeout(timeout);
         timeout = null;
 
+        checkIfAllWeightsAreZero();
         mainNode.emit('weights.update', {
           index,
           value: range.value / 100
