@@ -28,10 +28,12 @@ export class LocalCanvasRenderer {
     let { width: windowWidth, height: windowHeight } = windowTag.getBoundingClientRect();
     let gridColumns = Math.round(windowWidth / 144);
     let gridRows = Math.ceil(glyphs.length / gridColumns);
-    console.log(gridColumns, 'x', gridRows);
 
-    let canvasWidth = windowWidth / gridColumns - 1;
-    let canvasHeight = Math.max(windowHeight / gridRows, 80) - 1;
+    let gridCanvasScreenWidth = windowWidth / gridColumns - 1;
+    let gridCanvasScreenHeight = Math.max(windowHeight / gridRows, 80) - 1;
+
+    let gridCanvasRenderWidth = gridCanvasScreenWidth * window.devicePixelRatio;
+    let gridCanvasRenderHeight = gridCanvasScreenHeight * window.devicePixelRatio;
 
     gridTag.style.setProperty('--num-columns', gridColumns);
 
@@ -39,8 +41,11 @@ export class LocalCanvasRenderer {
       let li = document.createElement('li');
       let canvas = document.createElement('canvas');
 
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
+      canvas.width = gridCanvasRenderWidth;
+      canvas.height = gridCanvasRenderHeight;
+
+      canvas.style.width = `${gridCanvasScreenWidth}px`;
+      canvas.style.height = `${gridCanvasScreenHeight}px`;
 
       this.canvases.push(canvas);
 
@@ -55,13 +60,22 @@ export class LocalCanvasRenderer {
     }
 
 
-    displayCanvasTag.width = windowWidth / 2 - 1;
-    displayCanvasTag.height = windowHeight - 65;
+    let displayCanvasScreenWidth = windowWidth / 2 - 1;
+    let displayCanvasScreenHeight = windowHeight - 65;
+
+    let displayCanvasRenderWidth = displayCanvasScreenWidth * window.devicePixelRatio;
+    let displayCanvasRenderHeight = displayCanvasScreenHeight * window.devicePixelRatio;
+
+    displayCanvasTag.width = displayCanvasRenderWidth;
+    displayCanvasTag.height = displayCanvasRenderHeight;
+
+    displayCanvasTag.style.width = `${displayCanvasScreenWidth}px`;
+    displayCanvasTag.style.height = `${displayCanvasScreenHeight}px`;
 
 
     this.node.emit('initialize', {
-      gridCanvasSize: [canvasWidth, canvasHeight],
-      displayCanvasSize: [displayCanvasTag.width, displayCanvasTag.height]
+      gridCanvasSize: [gridCanvasRenderWidth, gridCanvasRenderHeight],
+      displayCanvasSize: [displayCanvasRenderWidth, displayCanvasRenderHeight]
     });
 
     this.node.on('render', (data) => {
@@ -166,4 +180,3 @@ export class LocalCanvasRenderer {
     }
   } */
 }
-

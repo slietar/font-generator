@@ -177,7 +177,7 @@ $ribbon-line-height: 1.2;
 #ribbon {
   background-color: var(--front-color);
   height: 100vh;
-  padding: 0 ($ribbon-font-size * ($ribbon-line-height - 1)) / 2;
+  padding: 0 ($ribbon-font-size * ($ribbon-line-height - 1)) * 0.5;
   overflow: hidden;
 
   font-size: $ribbon-font-size;
@@ -214,6 +214,10 @@ $ribbon-line-height: 1.2;
     padding: 0.9rem 1rem;
 
     font-size: 1rem;
+  }
+
+  &:hover {
+    background-color: #eee;
   }
 
   label {
@@ -526,4 +530,3 @@ $ribbon-line-height: 1.2;
     }
   }
 }
-

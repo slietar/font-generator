@@ -291,7 +291,7 @@ class Application {
       event.preventDefault();
 
       let count = document.querySelectorAll('#sliders li').length;
-      let nonNullCount = Math.floor(Math.random() * 5) + 2; // 2-7 (excl) non-null values
+      let nonNullCount = Math.floor(Math.random() * 3) + 2; // 2-4 (incl) non-null values
       let nonNullIndices = new Set();
 
       while (nonNullIndices.size < nonNullCount) {

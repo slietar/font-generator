@@ -78,4 +78,3 @@ export class LocalCanvasRenderer {
     this.node.emit('render-display', { instructions });
   }
 }
-
