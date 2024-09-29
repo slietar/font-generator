@@ -453,7 +453,7 @@ async function loadData(progressCallback) {
   let url = new URL('../download.dat', import.meta.url);
 
   let cachedRes = await cache.match(url);
-  let res = cachedRes || await fetch(url, { cache: 'no-store' });
+  let res = cachedRes ?? await fetch(url, { cache: 'no-store' });
 
   if (!res.ok) {
     throw new Error(res.statusText);
@@ -461,32 +461,25 @@ async function loadData(progressCallback) {
 
   let reader = res.body.getReader();
 
-  let chunks = [];
-  let receivedLength = 0;
+  let dataSize = 1_232_261;
+  let data = new ArrayBuffer(dataSize);
+  let dataBytes = new Uint8Array(data);
 
-  let target = 0;
+  let receivedSize = 0;
 
   while (true) {
-    const { done, value } = await reader.read();
+    let { done, value } = await reader.read();
 
     if (done) {
       break;
     }
 
-    chunks.push(value);
+    dataBytes.set(value, receivedSize);
+    receivedSize += value.length;
 
-    receivedLength += value.length;
-    target += value.length / 1226754 * 100;
-    progressCallback(target);
+    progressCallback(receivedSize / dataSize * 100);
   }
 
-  let data = new Uint8Array(receivedLength);
-  let position = 0;
-
-  for (let chunk of chunks) {
-    data.set(chunk, position);
-    position += chunk.length;
-  }
 
   if (!cachedRes) {
     cache.put(url, new Response(data));
