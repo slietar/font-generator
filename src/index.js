@@ -1,4 +1,3 @@
-import * as dat from 'dat.gui';
 import { IO } from './io';
 import { LocalCanvasRenderer } from './render-client';
 
@@ -14,38 +13,6 @@ window.addEventListener('load', () => {
 
   let app = new Application(mainNode);
   window.app = app;
-
-
-  let gui = new dat.GUI({ hideable: false });
-  // gui.hide();
-
-  let settings = {
-    invert: false,
-    pointDensity: 1.0,
-    renderer: 0,
-
-    clearCache() {
-      window.caches.delete('data-cache');
-    }
-  };
-
-  let folderData = gui.addFolder('Data');
-  folderData.add(settings, 'clearCache');
-  folderData.open();
-
-  let folderUI = gui.addFolder('UI');
-  let invertController = folderUI.add(settings, 'invert');
-  folderUI.open();
-
-  let folderRender = gui.addFolder('Render');
-  folderRender.add(settings, 'renderer', { 'Local canvas': 0, 'Remote canvas': 1, 'Transferred canvas': 2, SVG: 3, WebGL: 4 });
-  folderRender.add(settings, 'pointDensity', 0.5, 1.5);
-  folderRender.open();
-
-  invertController.onChange((value) => {
-    setInvert(value);
-  });
-
 
 
   let invertCheckbox = document.querySelector('#a');
@@ -64,10 +31,7 @@ window.addEventListener('load', () => {
       document.body.classList.remove('inverted');
     }
 
-    settings.invert = value;
     invertCheckbox.checked = value;
-
-    invertController.updateDisplay();
   }
 
 

@@ -10,7 +10,6 @@
     "build:styles": "sass styles/main.scss:public/styles.css"
   },
   "devDependencies": {
-    "dat.gui": "^0.7.6",
     "esbuild": "^0.24.0",
     "opentype.js": "^1.1.0",
     "sass": "^1.79.4"
