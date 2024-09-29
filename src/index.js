@@ -287,27 +287,29 @@ class Application {
   initializeSliders() {
     this.elements.fontItems = Array.from(document.querySelectorAll('#sliders input[type=range]'));
 
-    let randomCdf = (x) => {
-      let a = 4;
-      let k = 0.7; // minimum probability
-
-      return a * (x ** 3) / 3 - a * k * (x ** 2) + (1 + (k - 1 / 3) * a) * x;
-    };
-
-    let inverseRandomCdf = inverseFunc(randomCdf, 0, 1);
-
-
     this.elements.randomizeButton.addEventListener('click', (event) => {
       event.preventDefault();
 
-      let values = [];
+      let count = document.querySelectorAll('#sliders li').length;
+      let nonNullCount = Math.floor(Math.random() * 5) + 2; // 2-7 (excl) non-null values
+      let nonNullIndices = new Set();
 
-      for (let element of Array.from(document.querySelectorAll('#sliders li'))) {
-        let value = Math.max(0, inverseRandomCdf(Math.random()) - Math.random() * 0.5);
+      while (nonNullIndices.size < nonNullCount) {
+        let index = Math.floor(Math.random() * count);
+        nonNullIndices.add(index);
+      }
+
+      let values = new Array(count).fill(0).map((_, index) =>
+        nonNullIndices.has(index)
+          ? Math.random() * 0.5 + 0.5
+          : 0
+      );
+
+      for (let [index, element] of Array.from(document.querySelectorAll('#sliders li')).entries()) {
+        let value = values[index];
 
         element.querySelector('input[type=range]').value = Math.round(value * 100);
         element.querySelector('input[type=text]').value = Math.round(value * 100);
-        values.push(value);
       }
 
       this.elements.window.classList.add('blurred');
@@ -386,19 +388,4 @@ class ProgressBar {
     this.addition = value - this.element.value;
     this.target = value;
   }
-}
-
-
-function inverseFunc(func, min, max, steps = 10) {
-  let inverse = (target, min, max, steps) => {
-    let middle = (min + max) / 2;
-
-    return steps === 0
-      ? middle
-      : func(middle) > target
-        ? inverse(target, min, middle, steps - 1)
-        : inverse(target, middle, max, steps - 1);
-  };
-
-  return (target) => inverse(target, min, max, steps);
 }
