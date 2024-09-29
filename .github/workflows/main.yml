@@ -18,6 +18,8 @@ jobs:
         run: npm run build
       - name: Rename output directory
         run: mv public dist
+      - name: Add CNAME file
+        run: echo "fg.xn--litar-csa.net" > dist/CNAME
       - name: Upload artifact for deployment
         uses: actions/upload-pages-artifact@main
         with:
