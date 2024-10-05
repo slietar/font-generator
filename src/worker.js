@@ -145,41 +145,56 @@ class Application {
     let [alternateIndex, weightSum] = this.getAlternateIndex(glyphIndex);
     let alternateFontIndices = metadata.alternates[alternateIndex];
 
-    let [anchorPoints, numberPoints] = this.computeGlyphDensity(glyphIndex, alternateIndex, weightSum);
+    let anchorPoints;
 
+    if (alternateFontIndices.length > 1) {
+      let [localAnchorPoints, numberPoints] = this.computeGlyphDensity(glyphIndex, alternateIndex, weightSum);
 
-    for (let fontIndex of alternateFontIndices) {
-      let font = this.fonts[fontIndex];
-      let glyph = font.glyphs[glyphIndex];
+      for (let fontIndex of alternateFontIndices) {
+        let font = this.fonts[fontIndex];
+        let glyph = font.glyphs[glyphIndex];
 
-      for (let pathIndex = 0; pathIndex < glyph.paths.length; pathIndex++) {
-        let path = glyph.paths[pathIndex];
-        let controlPositions = metadata.control[fontIndex][pathIndex];
-        let pathAnchorPoints = anchorPoints[pathIndex];
-        let pathAnchorIndex = 0;
+        for (let pathIndex = 0; pathIndex < glyph.paths.length; pathIndex++) {
+          let path = glyph.paths[pathIndex];
+          let controlPositions = metadata.control[fontIndex][pathIndex];
+          let pathAnchorPoints = localAnchorPoints[pathIndex];
+          let pathAnchorIndex = 0;
 
-        for (let ctrlIndex = 0; ctrlIndex < controlPositions.length; ctrlIndex++) {
-          let ctrlPosition = controlPositions[ctrlIndex];
-          let nextCtrlPosition = controlPositions[(ctrlIndex + 1) % controlPositions.length];
+          for (let ctrlIndex = 0; ctrlIndex < controlPositions.length; ctrlIndex++) {
+            let ctrlPosition = controlPositions[ctrlIndex];
+            let nextCtrlPosition = controlPositions[(ctrlIndex + 1) % controlPositions.length];
 
-          let ctrlLength = nextCtrlPosition - ctrlPosition;
+            let ctrlLength = nextCtrlPosition - ctrlPosition;
 
-          if (ctrlLength < 0) ctrlLength += 1;
-          if (ctrlLength > 1) ctrlLength -= 1;
+            if (ctrlLength < 0) ctrlLength += 1;
+            if (ctrlLength > 1) ctrlLength -= 1;
 
-          let ctrlNumberPoints = numberPoints[pathIndex][ctrlIndex];
+            let ctrlNumberPoints = numberPoints[pathIndex][ctrlIndex];
 
-          for (let anchorIndex = 0; anchorIndex < ctrlNumberPoints; anchorIndex++) {
-            let anchorPosition = ctrlPosition + ctrlLength * (anchorIndex / ctrlNumberPoints);
-            if (anchorPosition >= 1) anchorPosition -= 1;
+            for (let anchorIndex = 0; anchorIndex < ctrlNumberPoints; anchorIndex++) {
+              let anchorPosition = ctrlPosition + ctrlLength * (anchorIndex / ctrlNumberPoints);
+              if (anchorPosition >= 1) anchorPosition -= 1;
 
-            let [curve, relPos] = path.curveAtPos(anchorPosition);
-            pathAnchorPoints[pathAnchorIndex] = pathAnchorPoints[pathAnchorIndex].add(curve.func(relPos).mul(this.weights[fontIndex] / weightSum));
+              let [curve, relPos] = path.curveAtPos(anchorPosition);
+              pathAnchorPoints[pathAnchorIndex] = pathAnchorPoints[pathAnchorIndex].add(curve.func(relPos).mul(this.weights[fontIndex] / weightSum));
 
-            pathAnchorIndex++;
+              pathAnchorIndex++;
+            }
           }
         }
       }
+
+      anchorPoints = localAnchorPoints;
+    } else {
+      let font = this.fonts[alternateFontIndices[0]];
+
+      anchorPoints = font.glyphs[glyphIndex].paths.map((path) => {
+        return path.curves.flatMap((curve) => {
+          let count = 5;
+
+          return new Array(count).fill(0).map((_, index) => curve.func(index / (count - 1)));
+        });
+      });
     }
 
     let paths = anchorPoints.map((pathAnchorPoints) => {
@@ -360,12 +375,12 @@ class Application {
       this.weights = value;
     }
 
-    if (stretch) {
-      this.currentStretch = {
-        x: 1 + Math.random() * 0.1,
-        y: 1 + Math.random() * 0.1
-      };
-    }
+    // if (stretch) {
+    //   this.currentStretch = {
+    //     x: 1 + Math.random() * 0.1,
+    //     y: 1 + Math.random() * 0.1
+    //   };
+    // }
 
     return new Promise((resolve) => {
       let a = Date.now();
